@@ -60,10 +60,7 @@ def sanitize(
     # Strip empty content
     if strip_empty:
         before = len(result)
-        result = [
-            m for m in result
-            if str(m.get("content") or "").strip()
-        ]
+        result = [m for m in result if str(m.get("content") or "").strip()]
         diff = before - len(result)
         if diff:
             issues.append(f"Removed {diff} empty message(s).")
@@ -91,15 +88,25 @@ def sanitize(
 
     # Truncate to max_messages (preserve system messages at front)
     if max_messages is not None and len(result) > max_messages:
+        before = len(result)
         system_msgs = [m for m in result if m.get("role") == "system"]
         others = [m for m in result if m.get("role") != "system"]
-        keep_others = max(0, max_messages - len(system_msgs))
-        trimmed = len(others) - keep_others
-        if trimmed > 0:
+        if len(system_msgs) >= max_messages:
+            # System messages alone exceed the budget: keep the most recent
+            # system messages and drop everything else so the final list never
+            # exceeds max_messages.
+            system_msgs = system_msgs[-max_messages:]
+            others = []
+        else:
+            keep_others = max_messages - len(system_msgs)
             others = others[-keep_others:] if keep_others else []
-            issues.append(f"Trimmed {trimmed} message(s) to fit max_messages={max_messages}.")
-            removed += trimmed
         result = system_msgs + others
+        trimmed = before - len(result)
+        if trimmed > 0:
+            issues.append(
+                f"Trimmed {trimmed} message(s) to fit max_messages={max_messages}."
+            )
+            removed += trimmed
 
     # Strip unknown keys
     if strip_unknown_keys:

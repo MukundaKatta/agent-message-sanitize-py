@@ -1,8 +1,12 @@
 """Tests for agent-message-sanitize-py."""
-import pytest
+
 from agent_message_sanitize import (
-    sanitize, SanitizeResult, strip_empty, move_system_first,
-    enforce_roles, normalize_content,
+    sanitize,
+    SanitizeResult,
+    strip_empty,
+    move_system_first,
+    enforce_roles,
+    normalize_content,
 )
 
 MSGS = [
@@ -87,6 +91,32 @@ def test_max_messages_preserves_system():
     # system + 1 most recent other
     assert result.messages[0]["role"] == "system"
     assert len(result.messages) == 2
+
+
+def test_max_messages_caps_when_system_exceeds_budget():
+    msgs = [
+        {"role": "system", "content": "s1"},
+        {"role": "system", "content": "s2"},
+        {"role": "system", "content": "s3"},
+        {"role": "user", "content": "u1"},
+    ]
+    result = sanitize(msgs, max_messages=2)
+    # Final list must never exceed max_messages, even if system msgs alone do.
+    assert len(result.messages) == 2
+    # Most recent system messages are kept; non-system dropped.
+    assert [m["content"] for m in result.messages] == ["s2", "s3"]
+    assert result.removed == 2
+
+
+def test_max_messages_system_count_equals_budget():
+    msgs = [
+        {"role": "system", "content": "a"},
+        {"role": "system", "content": "b"},
+        {"role": "user", "content": "u"},
+    ]
+    result = sanitize(msgs, max_messages=2)
+    assert len(result.messages) == 2
+    assert [m["content"] for m in result.messages] == ["a", "b"]
 
 
 def test_enforce_alternating_removes_consecutive():
