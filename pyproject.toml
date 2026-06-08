@@ -22,3 +22,6 @@ Homepage = "https://github.com/MukundaKatta/agent-message-sanitize-py"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+agent_message_sanitize = ["py.typed"]
